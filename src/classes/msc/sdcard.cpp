@@ -26,10 +26,10 @@ public:
     bool onReady(uint8_t lun) {
         if (m_parent->m_private)
         {
-            log_v("custom RAM disk onready");
+            log_v("custom SD disk onready");
             return m_parent->m_private->onReady(lun);
         } else {
-            log_v("RAM disk always ready");
+            log_v("SD disk always ready");
             return m_parent->sdcardReady; // RAM disk is always ready
         }
     }
@@ -38,7 +38,13 @@ public:
         (void) lun;
         *block_count = m_parent->block_count;
         *block_size = m_parent->block_size;
-        log_v("ram disk block count: %d, block size: %d", *block_count, *block_size);
+        if (m_parent->m_private)
+        {
+            log_v("custom SD disk oncapacity");
+            m_parent->m_private->onCapacity(lun, block_count, block_size);
+        } else {
+            log_v("SD disk block count: %d, block size: %d", *block_count, *block_size);
+        }
     }
     bool onStop(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
     {
@@ -62,19 +68,33 @@ public:
     }
     int32_t onRead(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
     {
-        log_v("default onread");
-        (void) lun;
-        SD.readRAW((uint8_t*)buffer, lba);
-
-        return bufsize;
+        if (m_parent->m_private)
+        {
+            log_v("custom SD disk onread");
+            (void) lun;
+            SD.readRAW((uint8_t*)buffer, lba);
+            return m_parent->m_private->onRead(lun, lba, offset, buffer, bufsize);
+        } else {        
+            log_v("default onread");
+            (void) lun;
+            SD.readRAW((uint8_t*)buffer, lba);
+            return bufsize;
+        }
     }
     int32_t onWrite(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
     {
-        log_v("default onwrite");
-        (void) lun;
-        SD.writeRAW((uint8_t*)buffer, lba);
-
-        return bufsize;
+        if (m_parent->m_private)
+        {
+            log_v("custom SD disk onwrite");
+            (void) lun;
+            SD.writeRAW((uint8_t*)buffer, lba);
+            return m_parent->m_private->onWrite(lun, lba, offset, buffer, bufsize);
+        } else {  
+            log_v("default onwrite");
+            (void) lun;
+            SD.writeRAW((uint8_t*)buffer, lba);
+            return bufsize;
+        }
     }
 };
 

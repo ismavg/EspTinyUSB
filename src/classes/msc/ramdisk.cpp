@@ -38,7 +38,13 @@ public:
         (void) lun;
         *block_count = m_parent->block_count;
         *block_size = m_parent->block_size;
-        log_v("ram disk block count: %d, block size: %d", *block_count, *block_size);
+        if (m_parent->m_private)
+        {
+            log_v("custom RAM disk oncapacity");
+            m_parent->m_private->onCapacity(lun, block_count, block_size);
+        } else {
+            log_v("RAM disk block count: %d, block size: %d", *block_count, *block_size);
+        }
     }
     bool onStop(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
     {
@@ -72,21 +78,37 @@ public:
     }
     int32_t onRead(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
     {
-        log_v("default onread");
-        (void) lun;
-        uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
-        memcpy(buffer, addr, bufsize);
-
-        return bufsize;
+        if (m_parent->m_private)
+        {
+            log_v("custom RAM disk onwrite");
+            (void) lun;
+            uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
+            memcpy(buffer, addr, bufsize);
+            return m_parent->m_private->onRead(lun, lba, offset, buffer, bufsize);
+        } else {
+            log_v("default onread");
+            (void) lun;
+            uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
+            memcpy(buffer, addr, bufsize);
+            return bufsize;
+        }
     }
     int32_t onWrite(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
     {
-        log_v("default onwrite");
-        (void) lun;
-        uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
-        memcpy(addr, buffer, bufsize);
-
-        return bufsize;
+        if (m_parent->m_private)
+        {
+            log_v("custom RAM disk onwrite");
+            (void) lun;
+            uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
+            memcpy(addr, buffer, bufsize);
+            return m_parent->m_private->onWrite(lun, lba, offset, buffer, bufsize);
+        } else {
+            log_v("default onwrite");
+            (void) lun;
+            uint8_t* addr = &m_parent->ram_disk[lba * 512] + offset;
+            memcpy(addr, buffer, bufsize);
+            return bufsize;
+        }
     }
 };
 
